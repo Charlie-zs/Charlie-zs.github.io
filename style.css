@@ -107,17 +107,17 @@ button, .clickable { cursor: pointer; }
 
 
 /* --- Gemini Chat Modal Styles --- */
-.modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.4);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+.modal-overlay { 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background-color: #ffffff; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 1000; 
     transition: opacity 0.3s ease;
 }
 .modal-content.gemini-chat-modal {
@@ -137,14 +137,13 @@ button, .clickable { cursor: pointer; }
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background-color: #ffffff;
+    background-color: transparent;
     flex-shrink: 0;
     border-bottom: 1px solid #e8e8e8;
 }
 .modal-header h3 {
     margin: 0;
     font-size: 18px;
-    color: #333;
 }
 .close-modal-btn {
     font-size: 28px;
@@ -160,7 +159,6 @@ button, .clickable { cursor: pointer; }
     display: flex;
     flex-direction: column;
     gap: 16px;
-    background-color: #f9f9f9;
     scrollbar-width: none; /* Firefox */
 }
 .ai-chat-history::-webkit-scrollbar {
@@ -190,7 +188,7 @@ button, .clickable { cursor: pointer; }
     border-bottom-right-radius: 4px;
 }
 .ai-message .chat-bubble {
-    background-color: #e9ecef;
+    background-color: #f1f0f0;
     color: #333;
     border-bottom-left-radius: 4px;
 }
@@ -199,21 +197,20 @@ button, .clickable { cursor: pointer; }
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    color: #6c757d;
+    color: #888;
     font-size: 14px;
-    background-color: #f9f9f9;
 }
 .ai-thinking-indicator .spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(0, 0, 0, 0.1);
-    border-top-color: #4a90e2;
+    border: 2px solid #ddd;
+    border-top-color: #555;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 .modal-footer {
     padding: 8px 16px;
-    background-color: #ffffff;
+    background-color: transparent;
     flex-shrink: 0;
     border-top: 1px solid #e8e8e8;
 }
@@ -221,10 +218,10 @@ button, .clickable { cursor: pointer; }
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    background-color: #ffffff;
+    background-color: #f5f5f5;
     border-radius: 24px;
     padding: 4px;
-    border: 1px solid #ced4da;
+    border: 1px solid #ddd;
 }
 #ai-user-query {
     flex-grow: 1;
@@ -240,11 +237,11 @@ button, .clickable { cursor: pointer; }
     overflow-y: hidden;
 }
 #ai-user-query::placeholder {
-    color: #adb5bd;
+    color: #999;
 }
 #ai-send-btn {
-    background-color: #4a90e2;
-    color: #ffffff;
+    background-color: transparent;
+    color: #4a90e2;
     border: none;
     border-radius: 50%;
     width: 40px;
@@ -257,11 +254,11 @@ button, .clickable { cursor: pointer; }
     transition: background-color 0.2s;
 }
 #ai-send-btn:hover {
-    background-color: #357abd;
+    background-color: #e0e0e0;
 }
 #ai-send-btn:disabled {
-    color: #ffffff;
+    color: #ccc;
     cursor: not-allowed;
-    background-color: #a3c9f1;
+    background-color: transparent;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

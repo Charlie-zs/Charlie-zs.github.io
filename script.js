@@ -578,7 +578,7 @@ function updateAPIPlaceholders() {
     const platform = apiPlatformSelect.value;
     if (platform === 'google-gemini') {
         apiUrlInput.placeholder = 'https://generativelanguage.googleapis.com/...';
-        apiModelInput.placeholder = 'gemini-2.5-flash';
+        apiModelInput.placeholder = 'gemini-1.5-flash';
     } else if (platform === 'openai') {
         apiUrlInput.placeholder = 'https://api.openai.com/v1/chat/completions';
         apiModelInput.placeholder = 'gpt-4o';
@@ -726,3 +726,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('back-to-settings-btn').addEventListener('click', showSettingsView);
     apiPlatformSelect.addEventListener('change', updateAPIPlaceholders);
 });
+

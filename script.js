@@ -1,5 +1,6 @@
 
 
+
 let questions = [];
 let state = {};
 let settings = {};
@@ -27,6 +28,12 @@ const apiKeyInput = document.getElementById('api-key');
 const apiModelInput = document.getElementById('api-model');
 const apiSystemPromptTextarea = document.getElementById('api-system-prompt');
 const apiTestFeedback = document.getElementById('api-test-feedback');
+
+// AI Chat variables
+let aiChatHistory = [];
+let thinkingTimerInterval = null;
+let thinkingStartTime = null;
+let initialAIPrompt = '';
 
 
 // --- View Management ---
@@ -622,7 +629,7 @@ async function testAPIConnection() {
     apiTestFeedback.className = '';
 
     try {
-        await callAI('hi', { platform, url, apiKey, model, systemPrompt: 'test' });
+        await callAI([{role: 'user', text: 'hi'}], { platform, url, apiKey, model, systemPrompt: 'You are a helpful assistant.' });
         apiTestFeedback.textContent = '✅ 连接成功！';
         apiTestFeedback.className = 'status-correct';
     } catch (error) {
@@ -631,7 +638,7 @@ async function testAPIConnection() {
     }
 }
 
-async function callAI(userPrompt, apiConfig) {
+async function callAI(messages, apiConfig) {
     const { platform, url, apiKey, model, systemPrompt } = apiConfig;
     let finalUrl;
     let headers = { 'Content-Type': 'application/json' };
@@ -639,18 +646,27 @@ async function callAI(userPrompt, apiConfig) {
 
     if (platform === 'google-gemini') {
         finalUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const contents = messages.map(msg => ({
+            role: msg.role === 'model' ? 'model' : 'user', // Gemini uses 'model' for assistant
+            parts: [{ text: msg.text }]
+        }));
         body = JSON.stringify({
-            contents: [{ parts: [{ text: userPrompt }] }],
-            systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+            contents: contents,
+            systemInstruction: systemPrompt ? { role: 'system', parts: [{ text: systemPrompt }] } : undefined,
         });
     } else { // OpenAI or Custom
         finalUrl = url;
         headers['Authorization'] = `Bearer ${apiKey}`;
+        const openaiMessages = messages.map(msg => ({
+            role: msg.role === 'model' ? 'assistant' : 'user',
+            content: msg.text
+        }));
+        
         body = JSON.stringify({
             model: model,
             messages: [
                 { role: 'system', content: systemPrompt || 'You are a helpful assistant.' },
-                { role: 'user', content: userPrompt }
+                ...openaiMessages
             ]
         });
     }
@@ -681,60 +697,92 @@ function openAITutorModal() {
     const originalIndex = questionPoolIndexes[viewState.currentIndex];
     
     if (originalIndex === undefined) return;
-    const questionData = questions[originalIndex];
+    const q = questions[originalIndex];
+
+    const optionsString = q.type === 'fill' ? '' : `【选项】:\n${Object.entries(q.options).map(([key, value]) => `${key}. ${value}`).join('\n')}`;
+    
+    initialAIPrompt = `我正在做一道题，请你以一个循循善诱的老师的身份，帮我解答疑惑。请不要直接告诉我答案，而是引导我思考。这是题目的背景信息：\n\n【题目】: ${q.question}\n${optionsString}\n【正确答案】: ${q.answer}\n【答案解析】: ${q.analysis}`;
+
+    aiChatHistory = [{ role: 'model', text: `你好！关于这道题“${q.question.substring(0, 20)}...”，有什么我可以帮助你的吗？` }];
+    renderChatHistory();
 
     document.getElementById('ai-user-query').value = '';
-    document.getElementById('ai-response-text').textContent = '';
     document.getElementById('ai-tutor-modal').style.display = 'flex';
 }
 
 function closeAITutorModal() {
     document.getElementById('ai-tutor-modal').style.display = 'none';
+    stopThinkingTimer();
 }
 
 async function askAI() {
     const userQuery = document.getElementById('ai-user-query').value.trim();
-    if (!userQuery) {
-        alert('请输入你的问题！');
-        return;
-    }
+    if (!userQuery) return;
+
+    const aiQueryTextarea = document.getElementById('ai-user-query');
+    aiQueryTextarea.value = '';
+    aiQueryTextarea.style.height = 'auto';
+
+    aiChatHistory.push({ role: 'user', text: userQuery });
+    renderChatHistory();
 
     const sendBtn = document.getElementById('ai-send-btn');
-    const loader = document.getElementById('ai-response-loader');
-    const responseText = document.getElementById('ai-response-text');
-
     sendBtn.disabled = true;
-    loader.style.display = 'block';
-    responseText.textContent = '';
+    startThinkingTimer();
 
-    const isMainView = state.currentView === 'main';
-    const viewState = isMainView ? state.main : state.wrongBook;
-    const questionPoolIndexes = isMainView ? [...Array(questions.length).keys()] : state.wrongBook.wrongQuestionIndexes;
-    const originalIndex = questionPoolIndexes[viewState.currentIndex];
-    const q = questions[originalIndex];
-
-    const optionsString = Object.entries(q.options).map(([key, value]) => `${key}. ${value}`).join('\n');
-    const fullPrompt = `
-        我正在做一道选择题，需要你的帮助。
-        
-        【题目】: ${q.question}
-        【选项】:
-        ${optionsString}
-        【正确答案】: ${q.answer}
-        【答案解析】: ${q.analysis}
-
-        我的问题是：${userQuery}
-    `;
+    const messagesForAPI = [
+        { role: 'user', text: initialAIPrompt },
+        { role: 'model', text: '好的，我明白了。我会作为一名循循善诱的老师来引导用户。请问用户有什么问题？' },
+        ...aiChatHistory
+    ];
 
     try {
-        const aiResponse = await callAI(fullPrompt, settings);
-        responseText.textContent = aiResponse;
+        const aiResponse = await callAI(messagesForAPI, settings);
+        aiChatHistory.push({ role: 'model', text: aiResponse });
     } catch (error) {
-        responseText.textContent = `出错了：${error.message}`;
+        aiChatHistory.push({ role: 'model', text: `抱歉，出错了：${error.message}` });
     } finally {
+        stopThinkingTimer();
+        renderChatHistory();
         sendBtn.disabled = false;
-        loader.style.display = 'none';
     }
+}
+
+function renderChatHistory() {
+    const historyContainer = document.getElementById('ai-chat-history');
+    historyContainer.innerHTML = '';
+    aiChatHistory.forEach(msg => {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'chat-bubble';
+        contentDiv.textContent = msg.text;
+
+        msgDiv.appendChild(contentDiv);
+        historyContainer.appendChild(msgDiv);
+    });
+    historyContainer.scrollTop = historyContainer.scrollHeight;
+}
+
+function startThinkingTimer() {
+    const timerEl = document.getElementById('ai-thinking-timer');
+    const indicatorEl = document.getElementById('ai-thinking-indicator');
+    indicatorEl.style.display = 'flex';
+    thinkingStartTime = Date.now();
+    timerEl.textContent = '思考中...';
+
+    thinkingTimerInterval = setInterval(() => {
+        const elapsed = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
+        timerEl.textContent = `思考中... ${elapsed}s`;
+    }, 100);
+}
+
+function stopThinkingTimer() {
+    clearInterval(thinkingTimerInterval);
+    thinkingTimerInterval = null;
+    thinkingStartTime = null;
+    document.getElementById('ai-thinking-indicator').style.display = 'none';
 }
         
 document.addEventListener('DOMContentLoaded', () => {
@@ -743,4 +791,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('back-to-quiz-btn').addEventListener('click', showQuizView);
     document.getElementById('back-to-settings-btn').addEventListener('click', showSettingsView);
     apiPlatformSelect.addEventListener('change', updateAPIPlaceholders);
+
+    const aiQueryTextarea = document.getElementById('ai-user-query');
+    aiQueryTextarea.addEventListener('input', () => {
+        aiQueryTextarea.style.height = 'auto';
+        aiQueryTextarea.style.height = (aiQueryTextarea.scrollHeight) + 'px';
+    });
+     aiQueryTextarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            askAI();
+        }
+    });
 });

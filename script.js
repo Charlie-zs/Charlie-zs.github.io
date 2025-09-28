@@ -1,4 +1,5 @@
 
+
 let questions = [];
 let state = {};
 let settings = {};
@@ -565,8 +566,12 @@ function saveSettings() {
         model: apiModelInput.value.trim(),
         systemPrompt: apiSystemPromptTextarea.value.trim(),
     };
-    if (!settings.apiKey || !settings.url || !settings.model) {
-        alert('❌ 请填写 API URL, API Key, 和模型名称！');
+    if (!settings.apiKey || !settings.model) {
+        alert('❌ 请填写 API Key 和模型名称！');
+        return;
+    }
+    if (settings.platform !== 'google-gemini' && !settings.url) {
+        alert('❌ 请填写 API URL！');
         return;
     }
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
@@ -576,15 +581,22 @@ function saveSettings() {
 
 function updateAPIPlaceholders() {
     const platform = apiPlatformSelect.value;
+    const urlLabel = document.querySelector('label[for="api-url"]');
+
     if (platform === 'google-gemini') {
-        apiUrlInput.placeholder = 'https://generativelanguage.googleapis.com/...';
-        apiModelInput.placeholder = 'gemini-1.5-flash';
-    } else if (platform === 'openai') {
-        apiUrlInput.placeholder = 'https://api.openai.com/v1/chat/completions';
-        apiModelInput.placeholder = 'gpt-4o';
+        apiUrlInput.style.display = 'none';
+        if (urlLabel) urlLabel.style.display = 'none';
+        apiModelInput.placeholder = 'gemini-2.5-flash';
     } else {
-        apiUrlInput.placeholder = '输入你的兼容OpenAI格式的API URL';
-        apiModelInput.placeholder = '输入模型名称';
+        apiUrlInput.style.display = 'block';
+        if (urlLabel) urlLabel.style.display = 'block';
+        if (platform === 'openai') {
+            apiUrlInput.placeholder = 'https://api.openai.com/v1/chat/completions';
+            apiModelInput.placeholder = 'gpt-4o';
+        } else {
+            apiUrlInput.placeholder = '输入你的兼容OpenAI格式的API URL';
+            apiModelInput.placeholder = '输入模型名称';
+        }
     }
 }
 
@@ -594,8 +606,14 @@ async function testAPIConnection() {
     const apiKey = apiKeyInput.value.trim();
     const model = apiModelInput.value.trim();
 
-    if (!apiKey || !url || !model) {
-        apiTestFeedback.textContent = '❌ 请填写 API URL, API Key, 和模型名称！';
+    if (!apiKey || !model) {
+        apiTestFeedback.textContent = '❌ 请填写 API Key, 和模型名称！';
+        apiTestFeedback.className = 'status-wrong';
+        return;
+    }
+    
+    if (platform !== 'google-gemini' && !url) {
+        apiTestFeedback.textContent = '❌ 请填写 API URL！';
         apiTestFeedback.className = 'status-wrong';
         return;
     }
@@ -615,17 +633,18 @@ async function testAPIConnection() {
 
 async function callAI(userPrompt, apiConfig) {
     const { platform, url, apiKey, model, systemPrompt } = apiConfig;
-    let finalUrl = url;
+    let finalUrl;
     let headers = { 'Content-Type': 'application/json' };
     let body;
 
     if (platform === 'google-gemini') {
-        finalUrl = `${url.replace(/\/$/, '')}/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        finalUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         body = JSON.stringify({
             contents: [{ parts: [{ text: userPrompt }] }],
             systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
         });
     } else { // OpenAI or Custom
+        finalUrl = url;
         headers['Authorization'] = `Bearer ${apiKey}`;
         body = JSON.stringify({
             model: model,
@@ -726,4 +745,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('back-to-settings-btn').addEventListener('click', showSettingsView);
     apiPlatformSelect.addEventListener('change', updateAPIPlaceholders);
 });
-

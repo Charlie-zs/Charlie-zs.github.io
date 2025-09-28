@@ -1,3 +1,4 @@
+
 let questions = [];
 let state = {};
 let settings = {};
@@ -96,51 +97,108 @@ fileImporter.addEventListener('change', (event) => {
 
 function parseTxtContent(text) {
     const questionBlocks = text.split(/---|\n\n\n+/).filter(block => block.trim() !== '');
+
     return questionBlocks.map(block => {
         const lines = block.trim().split('\n');
-        const questionObj = { options: {} };
-        let currentTag = null;
-        let questionText = [];
-        let analysisText = [];
+        const questionObj = { options: {}, question: '', analysis: '' };
+        let readingState = null; // null | 'question' | 'options' | 'analysis'
 
-        lines.forEach(line => {
-            const tagMatch = line.match(/^【(.*?)】(.*)/);
-            if (tagMatch) {
-                currentTag = tagMatch[1];
-                const content = tagMatch[2].trim();
-                if (currentTag === '题型') {
-                    if (content.includes('单选')) questionObj.type = 'single';
-                    else if (content.includes('多选')) questionObj.type = 'multiple';
-                    else if (content.includes('判断')) questionObj.type = 'truefalse';
-                    else if (content.includes('填空')) questionObj.type = 'fill';
-                } else if (currentTag === '答案') {
-                    questionObj.answer = content;
-                } else if (currentTag === '题目') {
-                    if (content) questionText.push(content);
-                } else if (currentTag === '解析') {
-                    if (content) analysisText.push(content);
-                }
-            } else {
-                if (currentTag === '题目') {
-                    questionText.push(line.trim());
-                } else if (currentTag === '解析') {
-                    analysisText.push(line.trim());
-                } else if (/^[A-Z]\s*[.、．]\s*/.test(line.trim())) {
-                    const key = line.trim().charAt(0);
-                    questionObj.options[key] = line.trim().substring(line.trim().indexOf('.') + 1).trim();
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
+            
+            // If we are reading a multiline field, check if we should stop.
+            if (readingState === 'question' || readingState === 'analysis') {
+                // Stop reading if a new tag or an option list starts
+                if (trimmedLine.match(/^(?:【(.+?)】|(.+?)[：:]\s?)/) || /^[A-Z]\s*[.、．]\s*/.test(trimmedLine)) {
+                    readingState = null;
                 }
             }
-        });
 
-        questionObj.question = questionText.join('\n').trim();
-        questionObj.analysis = analysisText.join('\n').trim();
+            // --- Unified Tag Matching ---
+            // Matches: 【Tag】Content, Tag: Content, Tag：Content (full-width colon)
+            const tagMatch = trimmedLine.match(/^(?:【(.+?)】|(.+?)[：:]\s?)(.*)/);
+
+            if (tagMatch) {
+                const tag = (tagMatch[1] || tagMatch[2] || '').trim();
+                const content = (tagMatch[3] || '').trim();
+
+                let isTagHandled = false;
+                switch (tag) {
+                    case '题型':
+                        isTagHandled = true;
+                        readingState = null;
+                        if (content.includes('单选')) questionObj.type = 'single';
+                        else if (content.includes('多选')) questionObj.type = 'multiple';
+                        else if (content.includes('判断')) questionObj.type = 'truefalse';
+                        else if (content.includes('填空')) questionObj.type = 'fill';
+                        break;
+                    case '问题':
+                    case '题目':
+                        isTagHandled = true;
+                        readingState = 'question';
+                        questionObj.question = content;
+                        break;
+                    case '答案':
+                        isTagHandled = true;
+                        readingState = null;
+                        questionObj.answer = content;
+                        break;
+                    case '解析':
+                        isTagHandled = true;
+                        readingState = 'analysis';
+                        questionObj.analysis = content;
+                        break;
+                    case '选项':
+                        isTagHandled = true;
+                        readingState = 'options';
+                        break;
+                }
+                if (isTagHandled) continue;
+            }
+
+            // --- Content Matching ---
+            // An option line
+            if (/^[A-Z]\s*[.、．]\s*/.test(trimmedLine)) {
+                const key = trimmedLine.charAt(0);
+                const value = trimmedLine.substring(trimmedLine.search(/[.、．]/) + 1).trim();
+                questionObj.options[key] = value;
+                readingState = 'options';
+            } 
+            // A continuation line for question/analysis
+            else if (readingState === 'question') {
+                questionObj.question += (questionObj.question ? '\n' : '') + trimmedLine;
+            } else if (readingState === 'analysis') {
+                questionObj.analysis += (questionObj.analysis ? '\n' : '') + trimmedLine;
+            }
+        }
+        
+        questionObj.question = (questionObj.question || '').trim();
+        questionObj.analysis = (questionObj.analysis || '').trim();
+
         if (questionObj.type === 'truefalse') {
             questionObj.options = {'A': '对', 'B': '错'};
             questionObj.answer = (questionObj.answer === '对' || questionObj.answer.toUpperCase() === 'A') ? 'A' : 'B';
         }
-        if(!questionObj.type) questionObj.type = 'single';
-
-        if (!questionObj.question || !questionObj.answer) throw new Error(`题目或答案缺失: ${block.substring(0, 20)}...`);
+        
+        if (!questionObj.type) {
+            if (Object.keys(questionObj.options).length > 0) {
+                 if (questionObj.answer && questionObj.answer.length > 1 && /^[A-Z]+$/.test(questionObj.answer)) {
+                     questionObj.type = 'multiple';
+                 } else {
+                     questionObj.type = 'single';
+                 }
+            } else if (questionObj.question && questionObj.question.includes('[___]')) {
+                questionObj.type = 'fill';
+            } else {
+                questionObj.type = 'single';
+            }
+        }
+        
+        if (!questionObj.question || !questionObj.answer) {
+             throw new Error(`题目或答案缺失: ${block.substring(0, 30)}...`);
+        }
+        
         return questionObj;
     });
 }
@@ -153,6 +211,7 @@ function exportQuestions() {
         let block = `【题型】${typeMap[q.type] || '单选题'}\n`;
         block += `【题目】\n${q.question}\n`;
         if (q.type !== 'fill' && q.type !== 'truefalse') {
+            block += '【选项】\n';
             block += Object.entries(q.options).map(([key, value]) => `${key}. ${value}`).join('\n') + '\n';
         }
         let answer = q.answer;
@@ -217,7 +276,7 @@ function render() {
 
     document.getElementById('no-wrong-questions').style.display = 'none';
     const questionTextEl = document.getElementById('question-text');
-    questionTextEl.innerHTML = questionData.question.replace(/___/g, '<input type="text" id="fill-in-blank-input" class="fill-in-blank-input">');
+    questionTextEl.innerHTML = questionData.question.replace(/\[___\]/g, '<input type="text" id="fill-in-blank-input" class="fill-in-blank-input">');
     questionTextEl.classList.remove('question-graduated');
     
     document.getElementById('analysis-text').textContent = questionData.analysis;
@@ -519,8 +578,7 @@ function updateAPIPlaceholders() {
     const platform = apiPlatformSelect.value;
     if (platform === 'google-gemini') {
         apiUrlInput.placeholder = 'https://generativelanguage.googleapis.com/...';
-        // FIX: Update model name to a supported version per Gemini API guidelines.
-        apiModelInput.placeholder = 'gemini-1.5-flash';
+        apiModelInput.placeholder = 'gemini-2.5-flash';
     } else if (platform === 'openai') {
         apiUrlInput.placeholder = 'https://api.openai.com/v1/chat/completions';
         apiModelInput.placeholder = 'gpt-4o';
@@ -561,9 +619,8 @@ async function callAI(userPrompt, apiConfig) {
     let headers = { 'Content-Type': 'application/json' };
     let body;
 
-    // FIX: Corrected platform check from 'google-genai' to 'google-gemini'.
     if (platform === 'google-gemini') {
-        finalUrl = `${url.replace(/\/$/, '')}/${model}:generateContent?key=${apiKey}`;
+        finalUrl = `${url.replace(/\/$/, '')}/v1beta/models/${model}:generateContent?key=${apiKey}`;
         body = JSON.stringify({
             contents: [{ parts: [{ text: userPrompt }] }],
             systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
@@ -591,7 +648,6 @@ async function callAI(userPrompt, apiConfig) {
     }
 
     const data = await response.json();
-    // FIX: Corrected platform check from 'google-genai' to 'google-gemini'.
     if (platform === 'google-gemini') {
         return data.candidates?.[0]?.content?.parts?.[0]?.text || '未能获取回复。';
     } else {
@@ -670,4 +726,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('back-to-settings-btn').addEventListener('click', showSettingsView);
     apiPlatformSelect.addEventListener('change', updateAPIPlaceholders);
 });
-

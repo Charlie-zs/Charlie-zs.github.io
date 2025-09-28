@@ -1,6 +1,7 @@
 
 
 
+
 let questions = [];
 let state = {};
 let settings = {};
@@ -652,7 +653,7 @@ async function callAI(messages, apiConfig) {
         }));
         body = JSON.stringify({
             contents: contents,
-            systemInstruction: systemPrompt ? { role: 'system', parts: [{ text: systemPrompt }] } : undefined,
+            systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
         });
     } else { // OpenAI or Custom
         finalUrl = url;
@@ -786,8 +787,8 @@ function stopThinkingTimer() {
 }
         
 document.addEventListener('DOMContentLoaded', () => {
-    loadDataAndInitialize();
     loadSettings();
+    loadDataAndInitialize();
     document.getElementById('back-to-quiz-btn').addEventListener('click', showQuizView);
     document.getElementById('back-to-settings-btn').addEventListener('click', showSettingsView);
     apiPlatformSelect.addEventListener('change', updateAPIPlaceholders);

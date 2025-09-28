@@ -1,3 +1,4 @@
+
 let questions = [
     { question: "题库是空的哦，请在“个人界面”导入你的题库！", options: {}, answer: "", analysis: "" }
 ];
@@ -229,7 +230,7 @@ function renderFooter(isMainView, index, total) {
     const aiDisabled = !settings.apiKey ? 'disabled' : '';
 
     footer.innerHTML = `<button class="footer-btn" onclick="navigate(-1)" ${prevDisabled}>←</button>
-                      <button class="footer-btn" onclick="${restartFn}">↶ ${restartText}</button>
+                      <button class="footer-btn restart-btn" onclick="${restartFn}">↶ ${restartText}</button>
                       <button class="footer-btn ai-tutor-btn" onclick="openAITutorModal()" ${aiDisabled}>AI</button>
                       <button class="footer-btn" onclick="navigate(1)" ${nextDisabled}>→</button>`;
 }
@@ -460,4 +461,3 @@ document.addEventListener('DOMContentLoaded', () => {
     apiPlatformSelect.addEventListener('change', updateAPIPlaceholders);
 
 });
-

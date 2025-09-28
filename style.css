@@ -121,7 +121,9 @@ button, .clickable { cursor: pointer; }
     transition: opacity 0.3s ease;
 }
 .modal-content.gemini-chat-modal {
-    background-color: #131314;
+    background-color: rgba(19, 19, 20, 0.85);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
     color: #e3e3e3;
     width: 100%;
     height: 100%;
@@ -232,7 +234,7 @@ button, .clickable { cursor: pointer; }
 }
 #ai-send-btn {
     background-color: #383a3f;
-    color: #909090;
+    color: #4a90e2;
     border: none;
     border-radius: 50%;
     width: 40px;
@@ -253,3 +255,18 @@ button, .clickable { cursor: pointer; }
     background-color: #383a3f;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* --- Custom Scrollbar for AI Chat --- */
+.ai-chat-history::-webkit-scrollbar {
+    width: 6px;
+}
+.ai-chat-history::-webkit-scrollbar-track {
+    background: transparent;
+}
+.ai-chat-history::-webkit-scrollbar-thumb {
+    background-color: rgba(144, 144, 144, 0.5);
+    border-radius: 3px;
+}
+.ai-chat-history::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(144, 144, 144, 0.7);
+}

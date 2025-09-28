@@ -683,7 +683,6 @@ function openAITutorModal() {
     if (originalIndex === undefined) return;
     const questionData = questions[originalIndex];
 
-    document.getElementById('modal-question-text').textContent = questionData.question;
     document.getElementById('ai-user-query').value = '';
     document.getElementById('ai-response-text').textContent = '';
     document.getElementById('ai-tutor-modal').style.display = 'flex';

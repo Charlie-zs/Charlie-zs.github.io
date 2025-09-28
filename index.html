@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>宝宝的刷题App</title>
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
 <script type="importmap">
 {
@@ -12,10 +14,12 @@
     "safevalues": "https://cdn.jsdelivr.net/npm/safevalues@^1.2.0/dist/mjs/index.min.js",
     "markdown-it": "https://aistudiocdn.com/markdown-it@^14.1.0",
     "sortablejs": "https://aistudiocdn.com/sortablejs@^1.15.6",
-    "@monaco-editor/loader": "https://aistudiocdn.com/@monaco-editor/loader@^1.5.0"
+    "@monaco-editor/loader": "https://aistudiocdn.com/@monaco-editor/loader@^1.5.0",
+    "monaco-editor": "https://aistudiocdn.com/monaco-editor@^0.53.0"
   }
 }
 </script>
+<link rel="stylesheet" href="/index.css">
 </head>
 <body>
     <div class="app-container">
@@ -46,6 +50,22 @@
                 </div>
                  <div class="settings-group">
                     <h3>ꉂ ^˶ᵒ ᵕ ˂˶ ^ฅ AI 设置</h3>
+                    <button onclick="showAISettingsView()">前往 AI 设置</button>
+                 </div>
+                <div class="settings-group">
+                    <h3>🎨 美化功能</h3>
+                    <textarea id="custom-css-textarea" placeholder="在这里粘贴你的CSS美化代码..."></textarea>
+                    <button onclick="applyCustomCSS()">应用美化</button>
+                </div>
+            </main>
+        </div>
+
+        <div id="ai-settings-view" class="view" style="display: none;">
+             <header class="app-header">
+                <span id="back-to-settings-btn" class="clickable">← 返回</span><span>AI 设置</span><span></span>
+            </header>
+            <main class="settings-main">
+                <div class="settings-group">
                     <label for="api-platform">API 平台</label>
                     <select id="api-platform">
                         <option value="google-gemini">Google Gemini</option>
@@ -65,11 +85,6 @@
                         <button onclick="saveSettings()">保存设置</button>
                     </div>
                     <p id="api-test-feedback"></p>
-                </div>
-                <div class="settings-group">
-                    <h3>🎨 美化功能</h3>
-                    <textarea id="custom-css-textarea" placeholder="在这里粘贴你的CSS美化代码..."></textarea>
-                    <button onclick="applyCustomCSS()">应用美化</button>
                 </div>
             </main>
         </div>
@@ -92,7 +107,18 @@
         </div>
     </div>
     <script src="script.js" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+<script type="module" src="/index.tsx"></script>
 </body>
 
 </html>
-

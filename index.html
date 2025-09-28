@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宝宝的刷题App</title>
+    <link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "safevalues/": "https://aistudiocdn.com/safevalues@^1.2.0/",
+    "safevalues": "https://cdn.jsdelivr.net/npm/safevalues@^1.2.0/dist/mjs/index.min.js",
+    "markdown-it": "https://aistudiocdn.com/markdown-it@^14.1.0",
+    "sortablejs": "https://aistudiocdn.com/sortablejs@^1.15.6",
+    "@monaco-editor/loader": "https://aistudiocdn.com/@monaco-editor/loader@^1.5.0"
+  }
+}
+</script>
+</head>
+<body>
+    <div class="app-container">
+        <div id="quiz-view" class="view">
+            <header id="app-header" class="app-header"></header>
+            <main class="app-main">
+                <div id="status-bar" class="quiz-status-bar"></div>
+                <div id="quiz-status" class="quiz-status" style="display: none;"></div>
+                <div class="question-container"><p id="question-text" class="question-text"></p></div>
+                <div class="options-container"><ul id="options-list"></ul></div>
+                <div id="analysis-container" class="analysis-container"><h4>💡 答案解析</h4><p id="analysis-text"></p></div>
+                <div id="no-wrong-questions" style="display:none; text-align:center; margin-top: 50px;"><h3>🎉 太棒了!</h3><p>错题本是空的哦！</p></div>
+            </main>
+            <footer id="app-footer" class="app-footer"></footer>
+        </div>
+
+        <div id="settings-view" class="view" style="display: none;">
+            <header class="app-header">
+                <span id="back-to-quiz-btn" class="clickable">← 返回</span><span>个人界面</span><span></span>
+            </header>
+            <main class="settings-main">
+                <div class="settings-group">
+                    <h3>💾 题库管理</h3>
+                    <button onclick="importQuestions()">导入题库 (.txt)</button>
+                    <button onclick="exportQuestions()">导出/保存当前题库</button>
+                    <input type="file" id="file-importer" accept=".txt" style="display:none;">
+                    <p>导入的题库会覆盖现有题目。请记得随时导出备份！</p>
+                </div>
+                 <div class="settings-group">
+                    <h3>🤖 AI 设置</h3>
+                    <label for="api-platform">API 平台</label>
+                    <select id="api-platform">
+                        <option value="google-gemini">Google Gemini</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="custom">自定义兼容</option>
+                    </select>
+                    <label for="api-url">API URL</label>
+                    <input type="text" id="api-url" placeholder="选择平台后将显示示例URL">
+                    <label for="api-key">API Key</label>
+                    <input type="password" id="api-key" placeholder="在此输入您的 API Key">
+                    <label for="api-model">模型名称</label>
+                    <input type="text" id="api-model" placeholder="例如: gemini-2.5-flash">
+                    <label for="api-system-prompt">AI 提示词 (System Prompt)</label>
+                    <textarea id="api-system-prompt" placeholder="例如: 你是一个友好的、循循善诱的老师..."></textarea>
+                    <div class="button-row">
+                        <button onclick="testAPIConnection()">测试连接</button>
+                        <button onclick="saveSettings()">保存设置</button>
+                    </div>
+                    <p id="api-test-feedback"></p>
+                </div>
+                <div class="settings-group">
+                    <h3>🎨 美化功能</h3>
+                    <textarea id="custom-css-textarea" placeholder="在这里粘贴你的CSS美化代码..."></textarea>
+                    <button onclick="applyCustomCSS()">应用美化</button>
+                </div>
+            </main>
+        </div>
+
+        <div id="ai-tutor-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal-btn" onclick="closeAITutorModal()">&times;</span>
+                <h3>AI 答疑</h3>
+                <div class="modal-question-context">
+                    <h4>题目原文：</h4>
+                    <p id="modal-question-text"></p>
+                </div>
+                <textarea id="ai-user-query" placeholder="关于这道题，你想问什么？..."></textarea>
+                <button id="ai-send-btn" onclick="askAI()">发送</button>
+                <div id="ai-response-container">
+                    <div id="ai-response-loader" style="display: none;"></div>
+                    <p id="ai-response-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js" defer></script>
+</body>
+</html>

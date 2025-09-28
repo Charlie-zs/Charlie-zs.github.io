@@ -65,7 +65,7 @@
                     <label for="api-key">API Key</label>
                     <input type="password" id="api-key" placeholder="在此输入您的 API Key">
                     <label for="api-model">模型名称</label>
-                    <input type="text" id="api-model" placeholder="例如: gemini-1.5-flash">
+                    <input type="text" id="api-model" placeholder="例如: gemini-2.5-flash">
                     <label for="api-system-prompt">AI 提示词 (System Prompt)</label>
                     <textarea id="api-system-prompt" placeholder="例如: 你是一个友好的、循循善诱的老师..."></textarea>
                     <div class="button-row">
@@ -78,17 +78,26 @@
         </div>
 
         <div id="ai-tutor-modal" class="modal-overlay" style="display: none;">
-            <div class="modal-content">
-                <span class="close-modal-btn" onclick="closeAITutorModal()">&times;</span>
-                <h3>AI 答疑</h3>
-                <div class="ai-input-container">
-                    <textarea id="ai-user-query" placeholder="关于这道题，你想问什么？..."></textarea>
-                    <button id="ai-send-btn" onclick="askAI()">发送</button>
+            <div class="modal-content gemini-chat-modal">
+                <header class="modal-header">
+                    <h3>AI 答疑</h3>
+                    <span class="close-modal-btn" onclick="closeAITutorModal()">&times;</span>
+                </header>
+                <div id="ai-chat-history" class="ai-chat-history">
+                    <!-- Chat messages will be dynamically inserted here -->
                 </div>
-                <div id="ai-response-container">
-                    <div id="ai-response-loader" style="display: none;"></div>
-                    <p id="ai-response-text"></p>
+                <div id="ai-thinking-indicator" class="ai-thinking-indicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <span id="ai-thinking-timer">思考中...</span>
                 </div>
+                <footer class="modal-footer">
+                    <div class="ai-input-container">
+                        <textarea id="ai-user-query" placeholder="问点什么吧..." rows="1"></textarea>
+                        <button id="ai-send-btn" onclick="askAI()">
+                            <svg height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"></path><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z"></path></svg>
+                        </button>
+                    </div>
+                </footer>
             </div>
         </div>
     </div>

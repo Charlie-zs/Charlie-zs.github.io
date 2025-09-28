@@ -107,24 +107,22 @@ button, .clickable { cursor: pointer; }
 
 
 /* --- Gemini Chat Modal Styles --- */
-.modal-overlay { 
-    position: absolute; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background-color: transparent; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    z-index: 1000; 
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
     transition: opacity 0.3s ease;
 }
 .modal-content.gemini-chat-modal {
-    background-color: transparent;
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    color: #66aaff;
+    background-color: #ffffff;
+    color: #333;
     width: 100%;
     height: 100%;
     border-radius: 0;
@@ -139,18 +137,19 @@ button, .clickable { cursor: pointer; }
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background-color: transparent;
+    background-color: #ffffff;
     flex-shrink: 0;
-    border-bottom: 1px solid rgba(102, 170, 255, 0.3);
+    border-bottom: 1px solid #e8e8e8;
 }
 .modal-header h3 {
     margin: 0;
     font-size: 18px;
+    color: #333;
 }
 .close-modal-btn {
     font-size: 28px;
     cursor: pointer;
-    color: #66aaff;
+    color: #888;
     background: none;
     border: none;
 }
@@ -161,6 +160,7 @@ button, .clickable { cursor: pointer; }
     display: flex;
     flex-direction: column;
     gap: 16px;
+    background-color: #f9f9f9;
     scrollbar-width: none; /* Firefox */
 }
 .ai-chat-history::-webkit-scrollbar {
@@ -183,14 +183,15 @@ button, .clickable { cursor: pointer; }
     line-height: 1.5;
     white-space: pre-wrap;
     word-wrap: break-word;
-    color: #bbeeff;
 }
 .user-message .chat-bubble {
-    background-color: rgba(0, 100, 255, 0.3);
+    background-color: #4a90e2;
+    color: #ffffff;
     border-bottom-right-radius: 4px;
 }
 .ai-message .chat-bubble {
-    background-color: rgba(102, 170, 255, 0.2);
+    background-color: #e9ecef;
+    color: #333;
     border-bottom-left-radius: 4px;
 }
 .ai-thinking-indicator {
@@ -198,38 +199,39 @@ button, .clickable { cursor: pointer; }
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    color: #88bbff;
+    color: #6c757d;
     font-size: 14px;
+    background-color: #f9f9f9;
 }
 .ai-thinking-indicator .spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(102, 170, 255, 0.4);
-    border-top-color: #bbeeff;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-top-color: #4a90e2;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 .modal-footer {
     padding: 8px 16px;
-    background-color: transparent;
+    background-color: #ffffff;
     flex-shrink: 0;
-    border-top: 1px solid rgba(102, 170, 255, 0.3);
+    border-top: 1px solid #e8e8e8;
 }
 .ai-input-container {
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    background-color: rgba(102, 170, 255, 0.1);
+    background-color: #ffffff;
     border-radius: 24px;
     padding: 4px;
-    border: 1px solid rgba(102, 170, 255, 0.3);
+    border: 1px solid #ced4da;
 }
 #ai-user-query {
     flex-grow: 1;
     border: none;
     outline: none;
     background: transparent;
-    color: #bbeeff;
+    color: #333;
     font-family: inherit;
     font-size: 16px;
     padding: 10px;
@@ -238,11 +240,11 @@ button, .clickable { cursor: pointer; }
     overflow-y: hidden;
 }
 #ai-user-query::placeholder {
-    color: rgba(102, 170, 255, 0.6);
+    color: #adb5bd;
 }
 #ai-send-btn {
-    background-color: transparent;
-    color: #4a90e2;
+    background-color: #4a90e2;
+    color: #ffffff;
     border: none;
     border-radius: 50%;
     width: 40px;
@@ -255,11 +257,11 @@ button, .clickable { cursor: pointer; }
     transition: background-color 0.2s;
 }
 #ai-send-btn:hover {
-    background-color: rgba(102, 170, 255, 0.2);
+    background-color: #357abd;
 }
 #ai-send-btn:disabled {
-    color: rgba(102, 170, 255, 0.4);
+    color: #ffffff;
     cursor: not-allowed;
-    background-color: transparent;
+    background-color: #a3c9f1;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

@@ -81,12 +81,10 @@
             <div class="modal-content">
                 <span class="close-modal-btn" onclick="closeAITutorModal()">&times;</span>
                 <h3>AI 答疑</h3>
-                <div class="modal-question-context">
-                    <h4>题目原文：</h4>
-                    <p id="modal-question-text"></p>
+                <div class="ai-input-container">
+                    <textarea id="ai-user-query" placeholder="关于这道题，你想问什么？..."></textarea>
+                    <button id="ai-send-btn" onclick="askAI()">发送</button>
                 </div>
-                <textarea id="ai-user-query" placeholder="关于这道题，你想问什么？..."></textarea>
-                <button id="ai-send-btn" onclick="askAI()">发送</button>
                 <div id="ai-response-container">
                     <div id="ai-response-loader" style="display: none;"></div>
                     <p id="ai-response-text"></p>

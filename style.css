@@ -262,4 +262,4 @@ button, .clickable { cursor: pointer; }
     cursor: not-allowed;
     background-color: transparent;
 }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transfo
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

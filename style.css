@@ -113,7 +113,7 @@ button, .clickable { cursor: pointer; }
     left: 0; 
     width: 100%; 
     height: 100%; 
-    background-color: rgba(0, 0, 0, 0.6); 
+    background-color: transparent; 
     display: flex; 
     justify-content: center; 
     align-items: center; 
@@ -121,10 +121,10 @@ button, .clickable { cursor: pointer; }
     transition: opacity 0.3s ease;
 }
 .modal-content.gemini-chat-modal {
-    background-color: rgba(19, 19, 20, 0.85);
+    background-color: transparent;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    color: #e3e3e3;
+    color: #66aaff;
     width: 100%;
     height: 100%;
     border-radius: 0;
@@ -139,8 +139,9 @@ button, .clickable { cursor: pointer; }
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background-color: #1e1f20;
+    background-color: transparent;
     flex-shrink: 0;
+    border-bottom: 1px solid rgba(102, 170, 255, 0.3);
 }
 .modal-header h3 {
     margin: 0;
@@ -149,7 +150,7 @@ button, .clickable { cursor: pointer; }
 .close-modal-btn {
     font-size: 28px;
     cursor: pointer;
-    color: #909090;
+    color: #66aaff;
     background: none;
     border: none;
 }
@@ -160,6 +161,10 @@ button, .clickable { cursor: pointer; }
     display: flex;
     flex-direction: column;
     gap: 16px;
+    scrollbar-width: none; /* Firefox */
+}
+.ai-chat-history::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
 }
 .chat-message {
     display: flex;
@@ -178,13 +183,14 @@ button, .clickable { cursor: pointer; }
     line-height: 1.5;
     white-space: pre-wrap;
     word-wrap: break-word;
+    color: #bbeeff;
 }
 .user-message .chat-bubble {
-    background-color: #383a3f;
+    background-color: rgba(0, 100, 255, 0.3);
     border-bottom-right-radius: 4px;
 }
 .ai-message .chat-bubble {
-    background-color: #232529;
+    background-color: rgba(102, 170, 255, 0.2);
     border-bottom-left-radius: 4px;
 }
 .ai-thinking-indicator {
@@ -192,48 +198,50 @@ button, .clickable { cursor: pointer; }
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    color: #909090;
+    color: #88bbff;
     font-size: 14px;
 }
 .ai-thinking-indicator .spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid #5f6368;
-    border-top-color: #e8eaed;
+    border: 2px solid rgba(102, 170, 255, 0.4);
+    border-top-color: #bbeeff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 .modal-footer {
     padding: 8px 16px;
-    background-color: #1e1f20;
+    background-color: transparent;
     flex-shrink: 0;
+    border-top: 1px solid rgba(102, 170, 255, 0.3);
 }
 .ai-input-container {
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    background-color: #383a3f;
+    background-color: rgba(102, 170, 255, 0.1);
     border-radius: 24px;
     padding: 4px;
+    border: 1px solid rgba(102, 170, 255, 0.3);
 }
 #ai-user-query {
     flex-grow: 1;
     border: none;
     outline: none;
     background: transparent;
-    color: #e3e3e3;
+    color: #bbeeff;
     font-family: inherit;
     font-size: 16px;
     padding: 10px;
     resize: none;
     max-height: 120px;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 #ai-user-query::placeholder {
-    color: #909090;
+    color: rgba(102, 170, 255, 0.6);
 }
 #ai-send-btn {
-    background-color: #383a3f;
+    background-color: transparent;
     color: #4a90e2;
     border: none;
     border-radius: 50%;
@@ -247,26 +255,11 @@ button, .clickable { cursor: pointer; }
     transition: background-color 0.2s;
 }
 #ai-send-btn:hover {
-    background-color: #4a4d52;
+    background-color: rgba(102, 170, 255, 0.2);
 }
 #ai-send-btn:disabled {
-    color: #5f6368;
+    color: rgba(102, 170, 255, 0.4);
     cursor: not-allowed;
-    background-color: #383a3f;
+    background-color: transparent;
 }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* --- Custom Scrollbar for AI Chat --- */
-.ai-chat-history::-webkit-scrollbar {
-    width: 6px;
-}
-.ai-chat-history::-webkit-scrollbar-track {
-    background: transparent;
-}
-.ai-chat-history::-webkit-scrollbar-thumb {
-    background-color: rgba(144, 144, 144, 0.5);
-    border-radius: 3px;
-}
-.ai-chat-history::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(144, 144, 144, 0.7);
-}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transfo

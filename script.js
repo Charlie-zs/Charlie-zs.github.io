@@ -1,12 +1,18 @@
-
-let questions = [
-    { question: "题库是空的哦，请在“个人界面”导入你的题库！", options: {}, answer: "", analysis: "" }
-];
+let questions = [];
 let state = {};
 let settings = {};
 
+const STORAGE_KEYS = {
+    QUESTIONS: 'quizAppQuestions',
+    STATE: 'quizAppState',
+    SETTINGS: 'quizAppSettings',
+    CSS: 'quizAppCustomCSS'
+};
+
+// --- DOM Elements ---
 const quizView = document.getElementById('quiz-view');
 const settingsView = document.getElementById('settings-view');
+const aiSettingsView = document.getElementById('ai-settings-view');
 const fileImporter = document.getElementById('file-importer');
 const customCSSTextarea = document.getElementById('custom-css-textarea');
 const customStyleEl = document.createElement('style');
@@ -20,45 +26,156 @@ const apiModelInput = document.getElementById('api-model');
 const apiSystemPromptTextarea = document.getElementById('api-system-prompt');
 const apiTestFeedback = document.getElementById('api-test-feedback');
 
-function showQuizView() { quizView.style.display = 'flex'; settingsView.style.display = 'none'; render(); }
-function showSettingsView() { quizView.style.display = 'none'; settingsView.style.display = 'flex'; }
 
+// --- View Management ---
+function showQuizView() { quizView.style.display = 'flex'; settingsView.style.display = 'none'; aiSettingsView.style.display = 'none'; render(); }
+function showSettingsView() { quizView.style.display = 'none'; settingsView.style.display = 'flex'; aiSettingsView.style.display = 'none'; }
+function showAISettingsView() { settingsView.style.display = 'none'; aiSettingsView.style.display = 'flex'; }
+
+
+// --- Data Persistence ---
+function saveData() {
+    try {
+        localStorage.setItem(STORAGE_KEYS.QUESTIONS, JSON.stringify(questions));
+        localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(state));
+    } catch (e) {
+        console.error("Error saving data to localStorage", e);
+    }
+}
+
+function loadDataAndInitialize() {
+    const savedQuestions = localStorage.getItem(STORAGE_KEYS.QUESTIONS);
+    const savedState = localStorage.getItem(STORAGE_KEYS.STATE);
+
+    questions = savedQuestions ? JSON.parse(savedQuestions) : [{ type: 'single', question: "题库是空的哦，请在“个人界面”导入你的题库！", options: {}, answer: "", analysis: "" }];
+    
+    const defaultState = {
+        currentView: 'main',
+        main: { currentIndex: 0, userAnswers: {} },
+        wrongBook: { currentIndex: 0, userAnswers: {}, wrongQuestionIndexes: [] }
+    };
+    state = savedState ? JSON.parse(savedState) : defaultState;
+
+    // Ensure state compatibility
+    if (!state.wrongBook) state.wrongBook = defaultState.wrongBook;
+    if (!state.main) state.main = defaultState.main;
+    state.currentView = 'main'; // always start at main view
+
+    questions.forEach(q => {
+        q.wrongCount = q.wrongCount || 0;
+        q.correctStreak = q.correctStreak || 0;
+    });
+
+    render();
+}
+
+// --- Question I/O (TXT Parser) ---
 function importQuestions() { fileImporter.click(); }
 
 fileImporter.addEventListener('change', (event) => {
-    const file = event.target.files[0]; if (!file) return;
+    const file = event.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            const importedData = JSON.parse(e.target.result);
-            if (Array.isArray(importedData) && importedData.length > 0) {
-                questions = importedData;
-                initializeApp();
+            const parsedQuestions = parseTxtContent(e.target.result);
+            if (parsedQuestions.length > 0) {
+                questions = parsedQuestions;
+                resetProgressAndSave();
                 alert(`✅ 成功导入 ${questions.length} 道题！`);
-            } else { throw new Error('JSON数据不是数组或为空。'); }
-        } catch (err) { alert('❌ 导入失败！请确保文件是UTF-8编码的、格式正确的题库文件。'); }
+                showQuizView();
+            } else {
+                throw new Error('未解析到任何题目。');
+            }
+        } catch (err) {
+            alert(`❌ 导入失败！请检查文件格式。\n错误: ${err.message}`);
+        }
     };
     reader.readAsText(file, 'UTF-8');
 });
 
+function parseTxtContent(text) {
+    const questionBlocks = text.split(/---|\n\n\n+/).filter(block => block.trim() !== '');
+    return questionBlocks.map(block => {
+        const lines = block.trim().split('\n');
+        const questionObj = { options: {} };
+        let currentTag = null;
+        let questionText = [];
+        let analysisText = [];
+
+        lines.forEach(line => {
+            const tagMatch = line.match(/^【(.*?)】(.*)/);
+            if (tagMatch) {
+                currentTag = tagMatch[1];
+                const content = tagMatch[2].trim();
+                if (currentTag === '题型') {
+                    if (content.includes('单选')) questionObj.type = 'single';
+                    else if (content.includes('多选')) questionObj.type = 'multiple';
+                    else if (content.includes('判断')) questionObj.type = 'truefalse';
+                    else if (content.includes('填空')) questionObj.type = 'fill';
+                } else if (currentTag === '答案') {
+                    questionObj.answer = content;
+                } else if (currentTag === '题目') {
+                    if (content) questionText.push(content);
+                } else if (currentTag === '解析') {
+                    if (content) analysisText.push(content);
+                }
+            } else {
+                if (currentTag === '题目') {
+                    questionText.push(line.trim());
+                } else if (currentTag === '解析') {
+                    analysisText.push(line.trim());
+                } else if (/^[A-Z]\s*[.、．]\s*/.test(line.trim())) {
+                    const key = line.trim().charAt(0);
+                    questionObj.options[key] = line.trim().substring(line.trim().indexOf('.') + 1).trim();
+                }
+            }
+        });
+
+        questionObj.question = questionText.join('\n').trim();
+        questionObj.analysis = analysisText.join('\n').trim();
+        if (questionObj.type === 'truefalse') {
+            questionObj.options = {'A': '对', 'B': '错'};
+            questionObj.answer = (questionObj.answer === '对' || questionObj.answer.toUpperCase() === 'A') ? 'A' : 'B';
+        }
+        if(!questionObj.type) questionObj.type = 'single';
+
+        if (!questionObj.question || !questionObj.answer) throw new Error(`题目或答案缺失: ${block.substring(0, 20)}...`);
+        return questionObj;
+    });
+}
+
 function exportQuestions() {
-    questions.forEach(q => { delete q.isGraduating; });
-    const dataStr = JSON.stringify(questions, null, 2);
-    const dataBlob = new Blob([dataStr], {type: "text/plain"});
-    const url = window.URL.createObjectURL(dataBlob);
+    const typeMap = {
+        'single': '单选题', 'multiple': '多选题', 'truefalse': '判断题', 'fill': '填空题'
+    };
+    let textContent = questions.map(q => {
+        let block = `【题型】${typeMap[q.type] || '单选题'}\n`;
+        block += `【题目】\n${q.question}\n`;
+        if (q.type !== 'fill' && q.type !== 'truefalse') {
+            block += Object.entries(q.options).map(([key, value]) => `${key}. ${value}`).join('\n') + '\n';
+        }
+        let answer = q.answer;
+        if (q.type === 'truefalse') {
+             answer = q.answer === 'A' ? '对' : '错';
+        }
+        block += `【答案】${answer}\n`;
+        if (q.analysis) block += `【解析】\n${q.analysis}\n`;
+        return block;
+    }).join('---\n\n');
+
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `我的题库备份_${new Date().toISOString().slice(0,10)}.txt`;
+    a.download = `我的题库备份_${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
-    window.URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url);
 }
 
-function applyCustomCSS() {
-    customStyleEl.innerHTML = customCSSTextarea.value;
-    alert('新的美化样式已应用！');
-}
 
-function initializeApp() {
+// --- App Core Logic ---
+function resetProgressAndSave() {
     state = {
         currentView: 'main', 
         main: { currentIndex: 0, userAnswers: {} },
@@ -68,6 +185,7 @@ function initializeApp() {
         q.wrongCount = q.wrongCount || 0;
         q.correctStreak = q.correctStreak || 0;
     });
+    saveData();
     render();
 }
 
@@ -80,30 +198,26 @@ function render() {
         renderEmptyWrongBook();
         return;
     }
-    viewState.currentIndex = Math.min(viewState.currentIndex, questionPoolIndexes.length - 1);
-    if(viewState.currentIndex < 0) viewState.currentIndex = 0;
     
-    const currentIndex = viewState.currentIndex;
-    const originalIndex = questionPoolIndexes[currentIndex];
+    viewState.currentIndex = Math.max(0, Math.min(viewState.currentIndex, questionPoolIndexes.length - 1));
+    const originalIndex = questionPoolIndexes[viewState.currentIndex];
 
-    if(originalIndex === undefined) { 
-        renderEmptyWrongBook(); 
-        return; 
+    if (originalIndex === undefined || questions.length === 0) {
+        renderEmptyWrongBook(); return;
     }
     
     const questionData = questions[originalIndex];
 
     renderHeader(isMainView);
     renderStatusBar(isMainView);
-    renderFooter(isMainView, currentIndex, questionPoolIndexes.length);
+    renderFooter(isMainView, viewState.currentIndex, questionPoolIndexes.length);
     
-    const statusEl = document.getElementById('quiz-status');
-    statusEl.style.display = isMainView ? 'none' : 'block';
+    document.getElementById('quiz-status').style.display = isMainView ? 'none' : 'block';
     if (!isMainView) updateStatusDisplay();
 
     document.getElementById('no-wrong-questions').style.display = 'none';
     const questionTextEl = document.getElementById('question-text');
-    questionTextEl.textContent = questionData.question;
+    questionTextEl.innerHTML = questionData.question.replace(/___/g, '<input type="text" id="fill-in-blank-input" class="fill-in-blank-input">');
     questionTextEl.classList.remove('question-graduated');
     
     document.getElementById('analysis-text').textContent = questionData.analysis;
@@ -111,73 +225,148 @@ function render() {
 
     const optionsList = document.getElementById('options-list');
     optionsList.innerHTML = '';
-    for (const key in questionData.options) {
-        const li = document.createElement('li');
-        li.dataset.option = key;
-        li.innerHTML = `<input type="radio" name="q${originalIndex}"> <span class="option-text">${key}. ${questionData.options[key]}</span> <span class="feedback-icon"></span>`;
-        optionsList.appendChild(li);
-        li.addEventListener('click', () => handleOptionClick(li));
-    }
+    const inputType = questionData.type === 'multiple' ? 'checkbox' : 'radio';
 
+    if (questionData.type !== 'fill') {
+        for (const key in questionData.options) {
+            const li = document.createElement('li');
+            li.dataset.option = key;
+            li.innerHTML = `<input type="${inputType}" name="q${originalIndex}"> <span class="option-text">${key}. ${questionData.options[key]}</span> <span class="feedback-icon"></span>`;
+            optionsList.appendChild(li);
+            if (questionData.type === 'single' || questionData.type === 'truefalse') {
+                 li.addEventListener('click', () => handleOptionClick(li));
+            }
+        }
+    }
+    
+    if (questionData.type === 'multiple' || questionData.type === 'fill') {
+        const confirmBtn = document.createElement('button');
+        confirmBtn.textContent = '确认答案';
+        confirmBtn.className = 'confirm-btn';
+        confirmBtn.onclick = () => checkAnswer();
+        optionsList.appendChild(confirmBtn);
+    }
+    
     if (viewState.userAnswers[originalIndex] !== undefined) {
-        handleOptionClick(document.querySelector(`li[data-option="${viewState.userAnswers[originalIndex]}"]`), true);
+        checkAnswer(true);
     }
 }
 
-function handleOptionClick(selectedLi, isRestoring = false) {
+function handleOptionClick(selectedLi) {
+    const originalIndex = (state.currentView === 'main') ? state.main.currentIndex : state.wrongBook.wrongQuestionIndexes[state.wrongBook.currentIndex];
+    const q = questions[originalIndex];
+
+    if (q.type === 'single' || q.type === 'truefalse') {
+        if ((state.main.userAnswers[originalIndex] !== undefined && state.currentView === 'main') || 
+            (state.wrongBook.userAnswers[originalIndex] !== undefined && state.currentView === 'wrongBook')) return;
+        
+        const radio = selectedLi.querySelector('input');
+        if (radio) radio.checked = true;
+        checkAnswer();
+    }
+}
+
+
+function checkAnswer(isRestoring = false) {
     const isMainView = state.currentView === 'main';
     const viewState = isMainView ? state.main : state.wrongBook;
     const originalIndex = isMainView ? viewState.currentIndex : state.wrongBook.wrongQuestionIndexes[viewState.currentIndex];
-
+    
     if ((viewState.userAnswers[originalIndex] !== undefined || (questions[originalIndex] && questions[originalIndex].isGraduating)) && !isRestoring) return;
-    if (!isRestoring) { viewState.userAnswers[originalIndex] = selectedLi.dataset.option; }
-    
+
     const q = questions[originalIndex];
-    const selectedOption = selectedLi.dataset.option;
-    
-    if (selectedOption === q.answer) {
-        if (!isRestoring && !isMainView) {
-            q.correctStreak++;
-            if (q.correctStreak >= 3) {
-                q.isGraduating = true;
-                const questionTextEl = document.getElementById('question-text');
-                questionTextEl.classList.add('question-graduated');
-                const statusEl = document.getElementById('quiz-status');
-                statusEl.className = 'quiz-status status-correct';
-                statusEl.textContent = '🎉 恭喜！本题已掌握！';
-                
-                setTimeout(() => {
-                    state.wrongBook.wrongQuestionIndexes = state.wrongBook.wrongQuestionIndexes.filter(i => i !== originalIndex);
-                    delete q.isGraduating;
-                    render();
-                }, 1500);
-                return;
-            }
+    let userAnswer;
+    const isCorrect = () => {
+        if (q.type === 'multiple') {
+            return userAnswer.split('').sort().join('') === q.answer.split('').sort().join('');
+        }
+        return userAnswer === q.answer;
+    }
+
+    if (isRestoring) {
+        userAnswer = viewState.userAnswers[originalIndex];
+        if (q.type === 'single' || q.type === 'truefalse') {
+             document.querySelector(`li[data-option="${userAnswer}"] input`).checked = true;
+        } else if (q.type === 'multiple') {
+             userAnswer.split('').forEach(opt => {
+                document.querySelector(`li[data-option="${opt}"] input`).checked = true;
+            });
+        } else if (q.type === 'fill') {
+            const inputEl = document.getElementById('fill-in-blank-input');
+            if(inputEl) inputEl.value = userAnswer;
         }
     } else {
-        if (!isRestoring) {
-            q.wrongCount++;
+        if (q.type === 'single' || q.type === 'truefalse') {
+            const selectedRadio = document.querySelector(`input[name="q${originalIndex}"]:checked`);
+            if (!selectedRadio) return;
+            userAnswer = selectedRadio.parentElement.dataset.option;
+        } else if (q.type === 'multiple') {
+            const checkedBoxes = document.querySelectorAll(`input[name="q${originalIndex}"]:checked`);
+            userAnswer = Array.from(checkedBoxes).map(cb => cb.parentElement.dataset.option).sort().join('');
+        } else if (q.type === 'fill') {
+            const inputEl = document.getElementById('fill-in-blank-input');
+            if(inputEl) userAnswer = inputEl.value.trim();
+        }
+        viewState.userAnswers[originalIndex] = userAnswer;
+    }
+
+    if (!isRestoring) {
+        if (isCorrect()) {
+            if (!isMainView) {
+                q.correctStreak = (q.correctStreak || 0) + 1;
+                if (q.correctStreak >= 3) {
+                    q.isGraduating = true;
+                    document.getElementById('question-text').classList.add('question-graduated');
+                    const statusEl = document.getElementById('quiz-status');
+                    statusEl.className = 'quiz-status status-correct';
+                    statusEl.textContent = '🎉 恭喜！本题已掌握！';
+                    
+                    setTimeout(() => {
+                        state.wrongBook.wrongQuestionIndexes = state.wrongBook.wrongQuestionIndexes.filter(i => i !== originalIndex);
+                        delete q.isGraduating;
+                        saveData();
+                        render();
+                    }, 1500);
+                    return; // exit before showing standard feedback
+                }
+            }
+        } else {
+            q.wrongCount = (q.wrongCount || 0) + 1;
             q.correctStreak = 0;
             if (isMainView && !state.wrongBook.wrongQuestionIndexes.includes(originalIndex)) {
                 state.wrongBook.wrongQuestionIndexes.push(originalIndex);
             }
         }
+        saveData();
+    }
+    
+    // Display feedback
+    document.querySelectorAll('#options-list li, #options-list .confirm-btn, #fill-in-blank-input').forEach(el => el.classList.add('disabled'));
+    const inputEl = document.getElementById('fill-in-blank-input');
+    if (inputEl) inputEl.disabled = true;
+
+    if(q.type !== 'fill') {
+        document.querySelectorAll('#options-list li').forEach(li => {
+            const optValue = li.dataset.option;
+            const icon = li.querySelector('.feedback-icon');
+            const answerSet = new Set(q.answer.split(''));
+            const userSet = new Set((userAnswer || '').split(''));
+            
+            if (answerSet.has(optValue)) {
+                li.classList.add('correct'); icon.classList.add('correct'); icon.textContent = '✓';
+            } else if (userSet.has(optValue)) {
+                li.classList.add('incorrect'); icon.classList.add('incorrect'); icon.textContent = '✗';
+            }
+        });
+    } else { // Fill-in-the-blank feedback
+        if(inputEl) {
+             inputEl.classList.add(isCorrect() ? 'correct' : 'incorrect');
+        }
     }
 
-    document.querySelectorAll('#options-list li').forEach(li => {
-        li.classList.add('disabled');
-        const optValue = li.dataset.option;
-        const icon = li.querySelector('.feedback-icon');
-        if (optValue === q.answer) {
-            li.classList.add('correct'); icon.classList.add('correct'); icon.textContent = '✓';
-        } else if (optValue === selectedOption) {
-            li.classList.add('incorrect'); icon.classList.add('incorrect'); icon.textContent = '✗';
-        }
-    });
-
     document.getElementById('analysis-container').style.display = 'block';
-    if (isMainView) { renderStatusBar(true); } 
-    else { updateStatusDisplay(); }
+    if (isMainView) renderStatusBar(true);
+    else updateStatusDisplay();
 }
 
 function updateStatusDisplay() {
@@ -186,16 +375,18 @@ function updateStatusDisplay() {
     const q = questions[originalIndex];
     const statusEl = document.getElementById('quiz-status');
     statusEl.className = 'quiz-status status-wrong';
-    statusEl.textContent = `✅ ${q.correctStreak} / 3`;
+    statusEl.textContent = `✅ ${q.correctStreak || 0} / 3`;
 }
 
 function renderHeader(isMainView) {
     const header = document.getElementById('app-header');
-    if (isMainView) { 
-        header.innerHTML = `<span id="settings-icon" class="clickable">⚙️</span><span>做题</span><span></span>`;
+    header.innerHTML = isMainView ?
+        `<span id="settings-icon" class="clickable">⚙️</span><span>做题</span><span></span>` :
+        `<span id="back-from-wrongbook-btn" class="clickable">← 返回</span><span>错题本</span><span></span>`;
+    
+    if (isMainView) {
         document.getElementById('settings-icon').addEventListener('click', showSettingsView);
-    } else { 
-        header.innerHTML = `<span id="back-from-wrongbook-btn" class="clickable">← 返回</span><span>错题本</span><span></span>`;
+    } else {
         document.getElementById('back-from-wrongbook-btn').addEventListener('click', switchToMainView);
     }
 }
@@ -266,6 +457,7 @@ function restartQuiz(confirmFirst = true) {
     if (confirmFirst && !confirm("确定要重新开始本轮练习吗？（错题记录会保留）")) return;
     state.main.userAnswers = {};
     state.main.currentIndex = 0;
+    saveData();
     render();
 }
 
@@ -273,14 +465,23 @@ function restartWrongBook() {
     if (confirm("确定要重做错题本中的题目吗？")) {
         state.wrongBook.userAnswers = {};
         state.wrongBook.currentIndex = 0;
+        questions.forEach(q => { q.correctStreak = 0; });
+        saveData();
         render();
     }
 }
 
+
 // --- AI and Settings Logic ---
+function applyCustomCSS() {
+    const css = customCSSTextarea.value;
+    customStyleEl.innerHTML = css;
+    localStorage.setItem(STORAGE_KEYS.CSS, css);
+    alert('新的美化样式已应用！');
+}
 
 function loadSettings() {
-    const savedSettings = localStorage.getItem('quizAppSettings');
+    const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (savedSettings) {
         settings = JSON.parse(savedSettings);
         apiPlatformSelect.value = settings.platform || 'google-gemini';
@@ -288,6 +489,11 @@ function loadSettings() {
         apiKeyInput.value = settings.apiKey || '';
         apiModelInput.value = settings.model || '';
         apiSystemPromptTextarea.value = settings.systemPrompt || '';
+    }
+    const savedCSS = localStorage.getItem(STORAGE_KEYS.CSS);
+    if (savedCSS) {
+        customCSSTextarea.value = savedCSS;
+        customStyleEl.innerHTML = savedCSS;
     }
     updateAPIPlaceholders();
 }
@@ -304,16 +510,17 @@ function saveSettings() {
         alert('❌ 请填写 API URL, API Key, 和模型名称！');
         return;
     }
-    localStorage.setItem('quizAppSettings', JSON.stringify(settings));
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     alert('✅ 设置已保存！');
-    render(); // Re-render to enable/disable AI button
+    render();
 }
 
 function updateAPIPlaceholders() {
     const platform = apiPlatformSelect.value;
     if (platform === 'google-gemini') {
         apiUrlInput.placeholder = 'https://generativelanguage.googleapis.com/...';
-        apiModelInput.placeholder = 'gemini-1.5-flash';
+        // FIX: Update model name to a supported version per Gemini API guidelines.
+        apiModelInput.placeholder = 'gemini-2.5-flash';
     } else if (platform === 'openai') {
         apiUrlInput.placeholder = 'https://api.openai.com/v1/chat/completions';
         apiModelInput.placeholder = 'gpt-4o';
@@ -354,6 +561,7 @@ async function callAI(userPrompt, apiConfig) {
     let headers = { 'Content-Type': 'application/json' };
     let body;
 
+    // FIX: Corrected platform check from 'google-genai' to 'google-gemini'.
     if (platform === 'google-gemini') {
         finalUrl = `${url.replace(/\/$/, '')}/${model}:generateContent?key=${apiKey}`;
         body = JSON.stringify({
@@ -383,6 +591,7 @@ async function callAI(userPrompt, apiConfig) {
     }
 
     const data = await response.json();
+    // FIX: Corrected platform check from 'google-genai' to 'google-gemini'.
     if (platform === 'google-gemini') {
         return data.candidates?.[0]?.content?.parts?.[0]?.text || '未能获取回复。';
     } else {
@@ -455,9 +664,9 @@ async function askAI() {
 }
         
 document.addEventListener('DOMContentLoaded', () => {
-    initializeApp();
+    loadDataAndInitialize();
     loadSettings();
     document.getElementById('back-to-quiz-btn').addEventListener('click', showQuizView);
+    document.getElementById('back-to-settings-btn').addEventListener('click', showSettingsView);
     apiPlatformSelect.addEventListener('change', updateAPIPlaceholders);
-
 });

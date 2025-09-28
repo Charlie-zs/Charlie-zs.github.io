@@ -2,6 +2,7 @@
 
 
 
+
 let questions = [];
 let state = {};
 let settings = {};
@@ -702,9 +703,9 @@ function openAITutorModal() {
 
     const optionsString = q.type === 'fill' ? '' : `【选项】:\n${Object.entries(q.options).map(([key, value]) => `${key}. ${value}`).join('\n')}`;
     
-    initialAIPrompt = `我正在做一道题，请你以一个循循善诱的老师的身份，帮我解答疑惑。请不要直接告诉我答案，而是引导我思考。这是题目的背景信息：\n\n【题目】: ${q.question}\n${optionsString}\n【正确答案】: ${q.answer}\n【答案解析】: ${q.analysis}`;
+    initialAIPrompt = `你是一个AI辅导老师。你的任务是只针对以下这道题目进行解答和提供解析。这是题目的信息：\n\n【题目】: ${q.question}\n${optionsString}\n【正确答案】: ${q.answer}\n【答案解析】: ${q.analysis}`;
 
-    aiChatHistory = [{ role: 'model', text: `你好！关于这道题“${q.question.substring(0, 20)}...”，有什么我可以帮助你的吗？` }];
+    aiChatHistory = [{ role: 'model', text: '你好，我是小G' }];
     renderChatHistory();
 
     document.getElementById('ai-user-query').value = '';
@@ -733,7 +734,6 @@ async function askAI() {
 
     const messagesForAPI = [
         { role: 'user', text: initialAIPrompt },
-        { role: 'model', text: '好的，我明白了。我会作为一名循循善诱的老师来引导用户。请问用户有什么问题？' },
         ...aiChatHistory
     ];
 

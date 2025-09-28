@@ -228,10 +228,10 @@ function renderFooter(isMainView, index, total) {
     const restartText = isMainView ? '重做' : '重做错题';
     const aiDisabled = !settings.apiKey ? 'disabled' : '';
 
-    footer.innerHTML = `<button class="footer-btn" onclick="navigate(-1)" ${prevDisabled}>⬅️ 上一题</button>
-                      <button class="footer-btn" onclick="${restartFn}">🔁 ${restartText}</button>
-                      <button class="footer-btn ai-tutor-btn" onclick="openAITutorModal()" ${aiDisabled}>🤖 AI 答疑</button>
-                      <button class="footer-btn" onclick="navigate(1)" ${nextDisabled}>下一题 ➡️</button>`;
+    footer.innerHTML = `<button class="footer-btn" onclick="navigate(-1)" ${prevDisabled}>←</button>
+                      <button class="footer-btn" onclick="${restartFn}">↶ ${restartText}</button>
+                      <button class="footer-btn ai-tutor-btn" onclick="openAITutorModal()" ${aiDisabled}>AI</button>
+                      <button class="footer-btn" onclick="navigate(1)" ${nextDisabled}>→</button>`;
 }
 
 function renderEmptyWrongBook() {
@@ -460,3 +460,4 @@ document.addEventListener('DOMContentLoaded', () => {
     apiPlatformSelect.addEventListener('change', updateAPIPlaceholders);
 
 });
+
